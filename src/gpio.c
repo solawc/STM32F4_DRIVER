@@ -77,15 +77,28 @@ void gpio_all_clock_init(void) {
 #endif
 }
 
-
-
 // 校验GPIO端口和pin引脚是否和芯片复合
-static int
-gpio_valid(uint32_t pin)
+int gpio_valid(uint32_t pin)
 {
     uint32_t port = GPIO2PORT(pin);
     return port < ARRAY_SIZE(digital_regs) && digital_regs[port];
 }
+
+void gpio_peripheral(uint32_t pin, uint32_t mode, uint32_t pullup) {
+
+    GPIO_InitTypeDef GPIO_Init;
+
+    GPIO_TypeDef  *gpio_port = digital_regs[GPIO2PORT(pin)];
+    uint32_t bit = GPIO2BIT(pin);
+
+    GPIO_Init.Mode = mode;
+    GPIO_Init.Pin = bit;
+    GPIO_Init.Pull = pullup;
+    GPIO_Init.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_Init.Alternate = mode;
+    HAL_GPIO_Init(gpio_port, &GPIO_Init);
+}
+
 
 void gpio_out_reset(GPIO_TypeDef  *GPIOx ,uint32_t gpio_pin, uint32_t val) {
 
@@ -103,9 +116,7 @@ void gpio_out_reset(GPIO_TypeDef  *GPIOx ,uint32_t gpio_pin, uint32_t val) {
 struct gpio_out 
 gpio_out_setup(uint32_t pin, uint32_t val) {
 
-    int gpio_valid_get = gpio_valid(pin);
-
-    if(!gpio_valid_get) {
+    if(! gpio_valid(pin)) {
         // error!;
         while(1);
     }
@@ -139,11 +150,11 @@ void gpio_out_toggle(struct gpio_out g)
 }
 
 
+
 void gpio_in_reset(GPIO_TypeDef  *GPIOx ,uint32_t gpio_pin, uint32_t val) {
+// void gpio_in_reset(uint32_t pin, uint32_t val) {
 
     GPIO_InitTypeDef GPIO_Init;
-
-    HAL_GPIO_WritePin(GPIOx, gpio_pin, (GPIO_PinState)val);
 
     GPIO_Init.Mode = GPIO_MODE_INPUT;
     GPIO_Init.Pin = gpio_pin;
@@ -151,6 +162,9 @@ void gpio_in_reset(GPIO_TypeDef  *GPIOx ,uint32_t gpio_pin, uint32_t val) {
     GPIO_Init.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     HAL_GPIO_Init(GPIOx, &GPIO_Init);
 }
+
+
+
 
 struct gpio_in gpio_in_setup(uint32_t pin, uint32_t val) {
 
@@ -171,6 +185,9 @@ uint8_t gpio_in_read(struct gpio_in g)
 {
     return (uint8_t)HAL_GPIO_ReadPin(g.gpio_port, g.bit);
 }
+
+/**************************************************/
+
 
 /*******************使用demo***********************/
 

@@ -12,6 +12,7 @@
 
 
 void gpio_all_clock_init(void);
+int gpio_valid(uint32_t pin);
 
 struct gpio_out {
     void *gpio_port;
@@ -28,6 +29,7 @@ struct gpio_in {
 };
 struct gpio_in gpio_in_setup(uint32_t pin, uint32_t val);
 uint8_t gpio_in_read(struct gpio_in g);
+
 
 
 /* for test function */
