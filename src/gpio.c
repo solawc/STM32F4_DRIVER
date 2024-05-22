@@ -99,7 +99,6 @@ void gpio_peripheral(uint32_t pin, uint32_t mode, uint32_t pullup) {
     HAL_GPIO_Init(gpio_port, &GPIO_Init);
 }
 
-
 void gpio_out_reset(GPIO_TypeDef  *GPIOx ,uint32_t gpio_pin, uint32_t val) {
 
     GPIO_InitTypeDef GPIO_Init;
@@ -116,10 +115,7 @@ void gpio_out_reset(GPIO_TypeDef  *GPIOx ,uint32_t gpio_pin, uint32_t val) {
 struct gpio_out 
 gpio_out_setup(uint32_t pin, uint32_t val) {
 
-    if(! gpio_valid(pin)) {
-        // error!;
-        while(1);
-    }
+    if(!gpio_valid(pin)) { while(1); }
 
     GPIO_TypeDef  *gpio_port = digital_regs[GPIO2PORT(pin)];
 
@@ -137,22 +133,17 @@ void gpio_out_write(struct gpio_out g, uint32_t val) {
     HAL_GPIO_WritePin(g.gpio_port, g.bit, (GPIO_PinState)val);
 }
 
-void gpio_out_toggle_noirq(struct gpio_out g)
-{
+void gpio_out_toggle_noirq(struct gpio_out g) {
+
     HAL_GPIO_TogglePin(g.gpio_port, g.bit);
 }
 
-void gpio_out_toggle(struct gpio_out g)
-{
-    // irqstatus_t flag = irq_save();
+void gpio_out_toggle(struct gpio_out g) {
+
     gpio_out_toggle_noirq(g);
-    // irq_restore(flag);
 }
 
-
-
 void gpio_in_reset(GPIO_TypeDef  *GPIOx ,uint32_t gpio_pin, uint32_t val) {
-// void gpio_in_reset(uint32_t pin, uint32_t val) {
 
     GPIO_InitTypeDef GPIO_Init;
 
@@ -162,9 +153,6 @@ void gpio_in_reset(GPIO_TypeDef  *GPIOx ,uint32_t gpio_pin, uint32_t val) {
     GPIO_Init.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     HAL_GPIO_Init(GPIOx, &GPIO_Init);
 }
-
-
-
 
 struct gpio_in gpio_in_setup(uint32_t pin, uint32_t val) {
 
@@ -181,8 +169,8 @@ struct gpio_in gpio_in_setup(uint32_t pin, uint32_t val) {
     return g;
 }
 
-uint8_t gpio_in_read(struct gpio_in g)
-{
+uint8_t gpio_in_read(struct gpio_in g) {
+    
     return (uint8_t)HAL_GPIO_ReadPin(g.gpio_port, g.bit);
 }
 
