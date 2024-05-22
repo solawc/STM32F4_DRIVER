@@ -2,13 +2,12 @@
 #include "uart.h"
 #include "stm32f4xx_hal.h" 
 
-extern GPIO_TypeDef * const digital_regs[];
-
 struct uart_serial {
-
     uint32_t baud;
-
     UART_HandleTypeDef huart;
+
+    uint8_t receive_buff[192], receive_pos;
+    uint8_t transmit_buff[96], transmit_pos, transmit_max;
 };
 
 static void uart_gpio_reset(uint32_t tx_pin, uint32_t rx_pin) {
@@ -63,6 +62,36 @@ struct uart_serial uart_init(uint32_t tx_pin, uint32_t rx_pin, void *uart_port, 
     return uart_config(uart_port, baud);
 }
 
+void uart_write_byte(struct uart_serial uart, uint8_t data) {
+
+    HAL_UART_Transmit(&(uart.huart), &data, 1, 1000);
+}
+
+void uart_write(struct uart_serial uart, uint8_t *str, uint16_t size) {
+
+    HAL_UART_Transmit(&(uart.huart), str, size, 0xffff);
+}
+
+void uart_rx_irq_enable(struct uart_serial uart) {
+
+    // ..
+}
+
+void uart_tx_irq_enable(struct uart_serial uart) {
+
+    // ..
+}
+
+void uart_rx_irq_disable(struct uart_serial uart) {
+
+    // ..
+}
+
+void uart_tx_irq_disable(struct uart_serial uart) {
+
+    // ..
+}
+
 
 /*****************************************************/
 
@@ -93,16 +122,48 @@ void serial_send(uint8_t data) {
 
 void serial_test(void) {
 
-    // serial_send('A');
+    uint8_t str[9] = "debug1\r\n";
 
-    uint8_t str[8] = "debug\r\n";
-
-    STATUS = HAL_UART_Transmit(&(debug_uart.huart), str, 8, 1000);
-
-    if(STATUS != HAL_OK) {
-        while(1);
-    }
+    uart_write(debug_uart, str, 9);
 
     HAL_Delay(500);
 }
 
+
+#define CR1_FLAGS (USART_CR1_UE | USART_CR1_RE | USART_CR1_TE   \
+                   | USART_CR1_RXNEIE)
+
+void USART1_IRQHandler(void) {
+
+/*
+    uint32_t sr = USARTx->SR;
+    if (sr & (USART_SR_RXNE | USART_SR_ORE)) {
+        // The ORE flag is automatically cleared by reading SR, followed
+        // by reading DR.
+        serial_rx_byte(USARTx->DR);
+    }
+    if (sr & USART_SR_TXE && USARTx->CR1 & USART_CR1_TXEIE) {
+        uint8_t data;
+        int ret = serial_get_tx_byte(&data);
+        if (ret)
+            USARTx->CR1 = CR1_FLAGS;
+        else
+            USARTx->DR = data;
+    }
+*/
+    uint32_t sr = debug_uart.huart.Instance->SR;
+
+    if (sr & (USART_SR_RXNE | USART_SR_ORE)) {
+
+    }
+
+    if (sr & USART_SR_TXE && debug_uart.huart.Instance->CR1 & USART_CR1_TXEIE) {
+        uint8_t data;
+        // int ret = serial_get_tx_byte(&data);
+        int ret = -1;
+        if (ret)
+            debug_uart.huart.Instance->CR1 = CR1_FLAGS;
+        else
+            debug_uart.huart.Instance->DR = data;
+    }
+}

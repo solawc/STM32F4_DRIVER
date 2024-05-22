@@ -2,6 +2,7 @@
 #define __gpio_h
 
 #include "stdint.h" // uint32_t
+#include "stm32f4xx_hal.h"
 
 #define GPIO(PORT, NUM) (((PORT)-'A') * 16 + (NUM))       
 #define GPIO2PORT(PIN) ((PIN) / 16)                     // 通过PIN来计算当前属于GPIOX X端口的端口号
@@ -10,6 +11,7 @@
 // 编译相关
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
+extern GPIO_TypeDef * const digital_regs[];
 
 void gpio_all_clock_init(void);
 int gpio_valid(uint32_t pin);
@@ -29,8 +31,6 @@ struct gpio_in {
 };
 struct gpio_in gpio_in_setup(uint32_t pin, uint32_t val);
 uint8_t gpio_in_read(struct gpio_in g);
-
-
 
 /* for test function */
 void goio_test_init(void);
