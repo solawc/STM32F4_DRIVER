@@ -101,7 +101,7 @@ void uart_tx_irq_disable(struct uart_serial uart) {
 
 struct uart_serial debug_uart;
 
-void serial_init(uint32_t baud) {
+void serial_dev_init(uint32_t baud) {
 
     __HAL_RCC_USART1_CLK_ENABLE();
 
@@ -122,13 +122,12 @@ void serial_send(uint8_t data) {
 
 void serial_test(void) {
 
-    uint8_t str[9] = "debug1\r\n";
+    uint8_t str[9] = "GRBL DEBUG\r\n";
 
     uart_write(debug_uart, str, 9);
 
     HAL_Delay(500);
 }
-
 
 #define CR1_FLAGS (USART_CR1_UE | USART_CR1_RE | USART_CR1_TE   \
                    | USART_CR1_RXNEIE)

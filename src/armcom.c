@@ -44,3 +44,45 @@ void armcom_timer_init(void) {
 }
 
 
+void NMI_Handler(void)
+{
+
+}
+
+void MemManage_Handler(void)
+{
+
+}
+
+void BusFault_Handler(void)
+{
+  while (1)
+  {
+  }
+}
+
+void UsageFault_Handler(void)
+{
+  while (1)
+  {
+  }
+}
+
+void DebugMon_Handler(void)
+{
+}
+
+void PendSV_Handler(void)
+{
+}
+
+void SVC_Handler(void)
+{
+}
+
+void HardFault_Handler(void)
+{
+  while (1)
+  {
+  }
+}
