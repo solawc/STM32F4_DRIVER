@@ -43,6 +43,21 @@ void armcom_timer_init(void) {
     DWT->CYCCNT = 0;                                    // 清空计数器
 }
 
+void armcom_nvic_set_priority(IRQn_Type IRQn, uint32_t PreemptPriority, uint32_t SubPriority) {
+
+  HAL_NVIC_SetPriority(IRQn, 0, 0);
+}
+
+void armcom_nvic_enable(IRQn_Type IRQn) {
+
+  HAL_NVIC_EnableIRQ(IRQn);
+}
+
+void armcom_nvic_disable(IRQn_Type IRQn) {
+  HAL_NVIC_DisableIRQ(IRQn);
+}
+
+
 
 void NMI_Handler(void)
 {

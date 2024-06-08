@@ -1,14 +1,5 @@
 #include "gpio.h"
 #include "uart.h"
-#include "stm32f4xx_hal.h" 
-
-struct uart_serial {
-    uint32_t baud;
-    UART_HandleTypeDef huart;
-
-    uint8_t receive_buff[192], receive_pos;
-    uint8_t transmit_buff[96], transmit_pos, transmit_max;
-};
 
 static void uart_gpio_reset(uint32_t tx_pin, uint32_t rx_pin) {
 
@@ -72,24 +63,30 @@ void uart_write(struct uart_serial uart, uint8_t *str, uint16_t size) {
     HAL_UART_Transmit(&(uart.huart), str, size, 0xffff);
 }
 
+void uart_irq_enable(struct uart_serial uart) {
+
+    HAL_NVIC_SetPriority(USART1_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(USART1_IRQn);
+}
+
 void uart_rx_irq_enable(struct uart_serial uart) {
 
-    // ..
+    __HAL_UART_ENABLE_IT(&uart.huart, UART_IT_RXNE);
 }
 
 void uart_tx_irq_enable(struct uart_serial uart) {
 
-    // ..
+    __HAL_UART_ENABLE_IT(&uart.huart, UART_IT_TXE);
 }
 
 void uart_rx_irq_disable(struct uart_serial uart) {
 
-    // ..
+    __HAL_UART_DISABLE_IT(&uart.huart, UART_IT_RXNE);
 }
 
 void uart_tx_irq_disable(struct uart_serial uart) {
 
-    // ..
+    __HAL_UART_DISABLE_IT(&uart.huart, UART_IT_TXE);
 }
 
 
@@ -98,21 +95,24 @@ void uart_tx_irq_disable(struct uart_serial uart) {
 /*****************demo********************************/
 #define UART1_TX    GPIO('A', 9) 
 #define UART1_RX    GPIO('A', 10) 
+#define UART1_GPIO_CLK_ENABLE()     __HAL_RCC_GPIOA_CLK_ENABLE()
+#define UART1_CLK_ENABLE()          __HAL_RCC_USART1_CLK_ENABLE()
 
-struct uart_serial debug_uart;
+struct uart_serial test_uart;
 
-void serial_dev_init(uint32_t baud) {
+void serial_test_init(uint32_t baud) {
 
-    __HAL_RCC_USART1_CLK_ENABLE();
+    UART1_GPIO_CLK_ENABLE();
+    UART1_CLK_ENABLE();
 
-    debug_uart = uart_init(UART1_TX, UART1_RX, USART1, baud);
+    test_uart = uart_init(UART1_TX, UART1_RX, USART1, baud);
 }
 
 HAL_StatusTypeDef STATUS = HAL_ERROR;
 
-void serial_send(uint8_t data) {
+void serial_test_send(uint8_t data) {
 
-    STATUS = HAL_UART_Transmit(&(debug_uart.huart), &data, 1, 1000);
+    STATUS = HAL_UART_Transmit(&(test_uart.huart), &data, 1, 1000);
 
     if(STATUS != HAL_OK) {
 
@@ -124,45 +124,115 @@ void serial_test(void) {
 
     uint8_t str[9] = "GRBL DEBUG\r\n";
 
-    uart_write(debug_uart, str, 9);
+    uart_write(test_uart, str, 9);
 
     HAL_Delay(500);
 }
+/***********************************************************************************************************************/
 
-#define CR1_FLAGS (USART_CR1_UE | USART_CR1_RE | USART_CR1_TE   \
-                   | USART_CR1_RXNEIE)
+UART_HandleTypeDef huart1 = {
+    .Instance = USART1,
+    .Init.BaudRate = 115200,
+    .Init.HwFlowCtl = UART_HWCONTROL_NONE,
+    .Init.Mode = UART_MODE_TX_RX,
+    .Init.OverSampling = UART_OVERSAMPLING_16,
+    .Init.Parity = UART_PARITY_NONE,
+    .Init.StopBits = UART_STOPBITS_1,
+    .Init.WordLength = UART_WORDLENGTH_8B,
+};
 
-void USART1_IRQHandler(void) {
+struct uart_data {
+    /* UART 句柄*/
+    UART_HandleTypeDef *handle;
 
-/*
-    uint32_t sr = USARTx->SR;
-    if (sr & (USART_SR_RXNE | USART_SR_ORE)) {
-        // The ORE flag is automatically cleared by reading SR, followed
-        // by reading DR.
-        serial_rx_byte(USARTx->DR);
-    }
-    if (sr & USART_SR_TXE && USARTx->CR1 & USART_CR1_TXEIE) {
-        uint8_t data;
-        int ret = serial_get_tx_byte(&data);
-        if (ret)
-            USARTx->CR1 = CR1_FLAGS;
-        else
-            USARTx->DR = data;
-    }
-*/
-    uint32_t sr = debug_uart.huart.Instance->SR;
+    /* UART 对应的GPIO */
+    GPIO_TypeDef *gpio;
+    uint16_t tx_pin;
+    uint16_t rx_pin;
+};
 
-    if (sr & (USART_SR_RXNE | USART_SR_ORE)) {
+struct uart_device {
+    char *name;
+    struct uart_data *data;
+    int (*dev_uart_init)(struct uart_device *p_dev, uint32_t baud);
+    int (*dev_uart_send)(struct uart_device *p_dev, uint8_t data);
+    int (*dev_uart_recv)(struct uart_device *p_dev, uint8_t data);
+    int (*dev_uart_tx_irq)(struct uart_device *p_dev, bool status);
+    int (*dev_uart_rx_irq)(struct uart_device *p_dev, bool status);
+};
 
-    }
+static int dev_uart_gpio_init(struct uart_device *p_dev) {
 
-    if (sr & USART_SR_TXE && debug_uart.huart.Instance->CR1 & USART_CR1_TXEIE) {
-        uint8_t data;
-        // int ret = serial_get_tx_byte(&data);
-        int ret = -1;
-        if (ret)
-            debug_uart.huart.Instance->CR1 = CR1_FLAGS;
-        else
-            debug_uart.huart.Instance->DR = data;
-    }
+    GPIO_InitTypeDef GPIO_Init;
+    GPIO_Init.Mode = GPIO_MODE_AF_PP;
+    GPIO_Init.Pin = p_dev->data->tx_pin | p_dev->data->rx_pin;
+    GPIO_Init.Pull = GPIO_NOPULL;
+    GPIO_Init.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_Init.Alternate = (uint8_t)0x07; 
+    HAL_GPIO_Init(p_dev->data->gpio, p_dev->data->handle);
 }
+
+static int dev_uart_init(struct uart_device *p_dev, uint32_t baud)
+{
+    struct uart_data *data = p_dev->data;
+
+    dev_uart_gpio_init(p_dev);
+
+    if (HAL_UART_Init(data->handle) != HAL_OK)
+    {
+		return -1;
+    }
+
+    return 0;
+}
+
+static int dev_uart_send(struct uart_device *p_dev, uint8_t data)
+{
+    HAL_UART_Transmit(p_dev->data->handle, data, 1, 100);
+
+    return 0;
+}
+
+static int dev_uart_recv(struct uart_device *p_dev, uint8_t *data)
+{
+    *data = p_dev->data->handle->Instance->DR;
+    return 0;
+}
+
+int dev_uart_tx_irq(struct uart_device *p_dev, bool status)
+{
+    if(status)
+        __HAL_UART_ENABLE_IT(p_dev->data->handle, UART_IT_TXE);
+    else 
+        __HAL_UART_DISABLE_IT(p_dev->data->handle, UART_IT_TXE);
+
+    return 0;
+}
+
+int dev_uart_rx_irq(struct uart_device *p_dev, bool status)
+{
+    if(status)
+        __HAL_UART_ENABLE_IT(p_dev->data->handle, UART_IT_RXNE);
+    else 
+        __HAL_UART_DISABLE_IT(p_dev->data->handle, UART_IT_RXNE);
+    
+    return 0;
+}
+
+struct uart_data g_stm32_uart1_data = {
+    &huart1,
+    GPIOA,
+    GPIO_PIN_9,
+    GPIO_PIN_10,
+};
+
+struct uart_device uart1 = {
+    "stm32_uart1",          /* 设备名字：MCU厂家名_外设号 */
+    &g_stm32_uart1_data,    /* 私有数据 */
+    dev_uart_init,
+    dev_uart_send,
+    dev_uart_recv,
+    dev_uart_tx_irq,
+    dev_uart_rx_irq,
+};
+
