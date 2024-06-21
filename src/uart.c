@@ -1,72 +1,6 @@
-#include "gpio.h"
+#include "gpio_a.h"
 #include "uart.h"
 
-
-
-
-// struct uart_serial uart_init(uint32_t tx_pin, uint32_t rx_pin, void *uart_port, uint32_t baud) {
-
-//     uart_gpio_reset(tx_pin, rx_pin);
-
-//     return uart_config(uart_port, baud);
-// }
-
-// void uart_write_byte(struct uart_serial uart, uint8_t data) {
-
-//     HAL_UART_Transmit(&(uart.huart), &data, 1, 1000);
-// }
-
-// void uart_write(struct uart_serial uart, uint8_t *str, uint16_t size) {
-
-//     HAL_UART_Transmit(&(uart.huart), str, size, 0xffff);
-// }
-
-// void uart_irq_enable(struct uart_serial uart) {
-
-//     HAL_NVIC_SetPriority(USART1_IRQn, 0, 0);
-// 	   HAL_NVIC_EnableIRQ(USART1_IRQn);
-// }
-
-// void uart_rx_irq_enable(struct uart_serial uart) {
-
-//     __HAL_UART_ENABLE_IT(&uart.huart, UART_IT_RXNE);
-// }
-
-// void uart_tx_irq_enable(struct uart_serial uart) {
-
-//     __HAL_UART_ENABLE_IT(&uart.huart, UART_IT_TXE);
-// }
-
-// void uart_rx_irq_disable(struct uart_serial uart) {
-
-//     __HAL_UART_DISABLE_IT(&uart.huart, UART_IT_RXNE);
-// }
-
-// void uart_tx_irq_disable(struct uart_serial uart) {
-
-//     __HAL_UART_DISABLE_IT(&uart.huart, UART_IT_TXE);
-// }
-/*
-
-    HAL_NVIC_SetPriority(LaserUART_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(LaserUART_IRQn);
-
-
-*/
-
-
-/***********************************************************************************************************************/
-
-UART_HandleTypeDef huart1 = {
-    .Instance = USART1,
-    .Init.BaudRate = 115200,
-    .Init.HwFlowCtl = UART_HWCONTROL_NONE,
-    .Init.Mode = UART_MODE_TX_RX,
-    .Init.OverSampling = UART_OVERSAMPLING_16,
-    .Init.Parity = UART_PARITY_NONE,
-    .Init.StopBits = UART_STOPBITS_1,
-    .Init.WordLength = UART_WORDLENGTH_8B,
-};
 
 static int dev_uart_irq_enable(struct uart_device *p_dev, uint32_t PreemptPriority, uint32_t SubPriority) {
     HAL_NVIC_SetPriority(p_dev->data->irq_n, PreemptPriority, SubPriority);
@@ -103,9 +37,11 @@ static int dev_uart_init(struct uart_device *p_dev, uint32_t baud)
 
 static int dev_uart_send(struct uart_device *p_dev, uint8_t data)
 {
+    // 这里应该要实现串口中断发送，发送队列中的数据
+
     HAL_StatusTypeDef status = HAL_OK;
 
-    status = HAL_UART_Transmit(p_dev->data->handle, &data, 1, 100);
+    status = HAL_UART_Transmit(p_dev->data->handle, &data, 1, 100); // 阻塞型发送，效率低不好
 
     if(status != HAL_OK) 
         return -1;
@@ -119,7 +55,7 @@ static int dev_uart_recv(struct uart_device *p_dev, uint8_t *data)
     return 0;
 }
 
-int dev_uart_tx_irq(struct uart_device *p_dev, bool status)
+static int dev_uart_tx_irq(struct uart_device *p_dev, bool status)
 {
     if(status)
         __HAL_UART_ENABLE_IT(p_dev->data->handle, UART_IT_TXE);
@@ -128,16 +64,34 @@ int dev_uart_tx_irq(struct uart_device *p_dev, bool status)
     return 0;
 }
 
-int dev_uart_rx_irq(struct uart_device *p_dev, bool status)
+static int dev_uart_rx_irq(struct uart_device *p_dev, bool status)
 {
     if(status)
-        __HAL_UART_ENABLE_IT(p_dev->data->handle, UART_IT_RXNE);
+        HAL_UART_Receive_IT(p_dev->data->handle, &p_dev->data->rx_data, 1); // 启动中断接收
     else 
         __HAL_UART_DISABLE_IT(p_dev->data->handle, UART_IT_RXNE);
-    
+
     return 0;
 }
 
+/*****************************************************
+ *                  UART handler define
+*****************************************************/
+UART_HandleTypeDef huart1 = {
+    .Instance = USART1,
+    .Init.BaudRate = 115200,
+    .Init.HwFlowCtl = UART_HWCONTROL_NONE,
+    .Init.Mode = UART_MODE_TX_RX,
+    .Init.OverSampling = UART_OVERSAMPLING_16,
+    .Init.Parity = UART_PARITY_NONE,
+    .Init.StopBits = UART_STOPBITS_1,
+    .Init.WordLength = UART_WORDLENGTH_8B,
+};
+
+
+/*****************************************************
+ *                  UART Regiest 
+*****************************************************/
 struct uart_data g_stm32_uart1_data = {
     &huart1,
     GPIOA,
@@ -157,15 +111,16 @@ struct uart_device uart1 = {
     dev_uart_irq_enable,
 };
 
+/*****************************************************
+ *                  对外释放的接口 
+*****************************************************/
 struct uart_device *g_uart_dev_num[] = {
     &uart1,
 };
 
-struct uart_device *get_uart_dev(char *name) {
+struct uart_device *dev_uart_get(char *name) {
 
-    int i = 0;
-
-    for(i=0; i< sizeof(g_uart_dev_num) / sizeof(g_uart_dev_num[0]); i++) {
+    for(int i=0; i< sizeof(g_uart_dev_num) / sizeof(g_uart_dev_num[0]); i++) {
 
         if( 0 == strcmp(name, g_uart_dev_num[i]->name)) {
             return g_uart_dev_num[i];
@@ -175,13 +130,27 @@ struct uart_device *get_uart_dev(char *name) {
     return NULL;
 }
 
+/*****************************************************
+ *            UART IRQHandler Function
+*****************************************************/
+extern struct uart_device *serial_connect;
+void USART1_IRQHandler(void) {
+
+    HAL_UART_IRQHandler(&huart1);
+}
+
+/*****************************************************
+ *                  UART Driver Test
+*****************************************************/
+
 void uart_test1(void) {
 
+    // 时钟初始化
     __HAL_RCC_GPIOA_CLK_ENABLE();
     __HAL_RCC_USART1_CLK_ENABLE();
 
     struct uart_device *p_dev;
-    p_dev = get_uart_dev("stm32_uart1");
+    p_dev = dev_uart_get("stm32_uart1");
 
     p_dev->dev_uart_init(p_dev, 115200);
 
@@ -190,5 +159,4 @@ void uart_test1(void) {
         p_dev->dev_uart_send(p_dev, 'B');
         HAL_Delay(500);
     }
-
 }

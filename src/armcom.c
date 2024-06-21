@@ -45,16 +45,20 @@ void armcom_timer_init(void) {
 
 void armcom_nvic_set_priority(IRQn_Type IRQn, uint32_t PreemptPriority, uint32_t SubPriority) {
 
-  HAL_NVIC_SetPriority(IRQn, 0, 0);
+  uint32_t prioritygroup = 0x00U;
+  prioritygroup = NVIC_GetPriorityGrouping();
+  NVIC_SetPriority(IRQn, NVIC_EncodePriority(prioritygroup, PreemptPriority, SubPriority));
+
 }
 
 void armcom_nvic_enable(IRQn_Type IRQn) {
 
-  HAL_NVIC_EnableIRQ(IRQn);
+  NVIC_EnableIRQ(IRQn);
 }
 
 void armcom_nvic_disable(IRQn_Type IRQn) {
-  HAL_NVIC_DisableIRQ(IRQn);
+  
+  NVIC_DisableIRQ(IRQn);
 }
 
 
