@@ -21,8 +21,6 @@ struct uart_data {
     uint8_t rx_data;
 };
 
-
-
 struct uart_device {
     char *name;
     struct uart_data *data;

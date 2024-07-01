@@ -8,11 +8,29 @@
 #define USE_PLLQ    4
 #endif
 
+
+__WEAK void system_p_clock_init(void) {
+
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+
+  __HAL_RCC_USART1_CLK_ENABLE();
+
+  __HAL_RCC_TIM1_CLK_ENABLE();
+  __HAL_RCC_TIM3_CLK_ENABLE();
+  __HAL_RCC_TIM4_CLK_ENABLE();
+}
+
 void system_clock_init(void) {
 
   HAL_Init(); // Only use at STM32 HAL Lib.
   SystemClock_Config();
+  system_p_clock_init();
 }
+
+
 
 void SystemClock_Config(void)
 {

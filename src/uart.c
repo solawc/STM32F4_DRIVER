@@ -1,7 +1,6 @@
 #include "gpio_a.h"
 #include "uart.h"
 
-
 static int dev_uart_irq_enable(struct uart_device *p_dev, uint32_t PreemptPriority, uint32_t SubPriority) {
     HAL_NVIC_SetPriority(p_dev->data->irq_n, PreemptPriority, SubPriority);
     HAL_NVIC_EnableIRQ(p_dev->data->irq_n);
