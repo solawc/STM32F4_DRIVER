@@ -18,7 +18,6 @@ struct pwm_device {
     uint32_t (*pwm_ccr_get)(struct pwm_device *p_pwm);
 };
 
-
 int pwm_init(struct pwm_device *p_pwm, uint32_t period) {
 
     TIM_MasterConfigTypeDef sMasterConfig = {0};
