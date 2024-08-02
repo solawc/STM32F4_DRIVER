@@ -21,6 +21,15 @@ struct spi_device {
     int (*spi_dev_set_speed)(struct spi_device *spi, uint32_t speed);
 };
 
+struct spi_info {
+    SPI_TypeDef *spi;
+    uint8_t sck, miso, mosi, af_sck, af_miso, af_mosi;
+};
+
+static const struct spi_data spi_bus[] = {
+
+};
+
 int spi_dev_init(struct spi_device *spi) {
 
     GPIO_InitTypeDef GPIO_Init;

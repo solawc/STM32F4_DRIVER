@@ -6,6 +6,11 @@
 #define USE_PLLN    216
 #define USE_PLLP    0x2U // RCC_PLLP_DIV2
 #define USE_PLLQ    4
+#elif defined(STM32F407xx)
+#define USE_PLLM    8
+#define USE_PLLN    168
+#define USE_PLLP    0x2U // RCC_PLLP_DIV2
+#define USE_PLLQ    4
 #endif
 
 
@@ -23,7 +28,9 @@ __WEAK void system_p_clock_init(void) {
   __HAL_RCC_TIM3_CLK_ENABLE();
   __HAL_RCC_TIM4_CLK_ENABLE();
 
+#ifdef STM32F429xx
   __HAL_RCC_SPI5_CLK_ENABLE();
+#endif
 }
 
 void system_clock_init(void) {
@@ -33,18 +40,17 @@ void system_clock_init(void) {
   system_p_clock_init();
 }
 
-
-
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
+#ifdef STM32F429xx
   /** Configure the main internal regulator output voltage
   */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
-
+#endif
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
@@ -61,13 +67,15 @@ void SystemClock_Config(void)
     Error_Handler();
   }
 
+#ifdef STM32F429xx
   /** Activate the Over-Drive mode
   */
   if (HAL_PWREx_EnableOverDrive() != HAL_OK)
   {
     Error_Handler();
   }
-
+#endif
+  
   /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
@@ -82,6 +90,7 @@ void SystemClock_Config(void)
     Error_Handler();
   }
 }
+
 
 /* For STM32 HAL Lib use */
 void HAL_MspInit(void)

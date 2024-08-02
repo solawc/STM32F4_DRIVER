@@ -42,6 +42,7 @@ int base_timer_clear_update_flag(struct timer_device *p_timer) {
 
 int base_timer_set_reload(struct timer_device *p_timer, uint32_t reload) {
     __HAL_TIM_SET_AUTORELOAD(p_timer->data->handle, reload);
+	return 0;
 }
 
 int base_timer_set_cnt(struct timer_device *p_timer, uint32_t cnt) {

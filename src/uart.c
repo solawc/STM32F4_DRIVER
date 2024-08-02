@@ -1,9 +1,14 @@
 #include "gpio_a.h"
 #include "uart.h"
+#include "stdio.h"
+#include "stdlib.h"
+#include "string.h"
+
 
 static int dev_uart_irq_enable(struct uart_device *p_dev, uint32_t PreemptPriority, uint32_t SubPriority) {
     HAL_NVIC_SetPriority(p_dev->data->irq_n, PreemptPriority, SubPriority);
     HAL_NVIC_EnableIRQ(p_dev->data->irq_n);
+	return 0;
 }
 
 static int dev_uart_gpio_init(struct uart_device *p_dev) {
@@ -15,6 +20,9 @@ static int dev_uart_gpio_init(struct uart_device *p_dev) {
     GPIO_Init.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     GPIO_Init.Alternate = (uint8_t)0x07; 
     HAL_GPIO_Init(p_dev->data->gpio, &GPIO_Init);
+	
+	
+	return 0;
 }
 
 static int dev_uart_init(struct uart_device *p_dev, uint32_t baud)
@@ -27,7 +35,6 @@ static int dev_uart_init(struct uart_device *p_dev, uint32_t baud)
 
     if (HAL_UART_Init(data->handle) != HAL_OK)
     {
-        while(1);
 		return -1;
     }
 
@@ -149,6 +156,7 @@ void uart_test1(void) {
     __HAL_RCC_USART1_CLK_ENABLE();
 
     struct uart_device *p_dev;
+
     p_dev = dev_uart_get("stm32_uart1");
 
     p_dev->dev_uart_init(p_dev, 115200);

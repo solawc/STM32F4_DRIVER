@@ -53,10 +53,13 @@ int pwm_init(struct pwm_device *p_pwm, uint32_t period) {
     }
     
     HAL_TIM_PWM_Start(p_pwm->data->handler, p_pwm->data->ch);
+	
+	return 0;
 }
 
 int pwm_set(struct pwm_device *p_pwm, uint32_t duty) {
     __HAL_TIM_SetCompare(p_pwm->data->handler, p_pwm->data->ch, duty);
+	return 0;
 }
 
 uint32_t pwm_ccr_get(struct pwm_device *p_pwm) {
